@@ -21,7 +21,7 @@ from __future__ import print_function
 import os
 import time
 
-from typing import Optional, Sequence, Text
+from typing import Text
 
 import six
 import tensorflow as tf
@@ -35,52 +35,10 @@ EXTRA_ASSETS_DIRECTORY = 'assets.extra'
 
 def _create_tflite_converter(
     saved_model_path: Text,
-    quantization_optimizations: Sequence[tf.lite.Optimize],
-    quantization_supported_types: Sequence[tf.DType],
-    # TODO(b/175699054): Enable once data API is adopted.
-    input_data=None
-) -> tf.lite.TFLiteConverter:
-  """Creates a TFLite converter with proper quantization options.
-
-  Currently,
-  this supports DYNAMIC_RANGE, FULL_INTEGER and FLOAT16 quantizations.
-
-  Args:
-    saved_model_path: Path for the TF SavedModel.
-    quantization_optimizations: Options for optimizations in quantization. If
-      empty, no quantization will be applied(float32). Check
-      https://www.tensorflow.org/lite/performance/post_training_quantization for
-        details.
-    quantization_supported_types: Options for optimizations in quantization.
-      Check
-      https://www.tensorflow.org/lite/performance/post_training_quantization for
-        details.
-    input_data: Data for full-integer quantization to be used as a
-      representative dataset. None if quantization is not full-integer.
-
-  Returns:
-    A TFLite converter with the proper flags being set.
-
-  Raises:
-    NotImplementedError: Raises when full-integer quantization is called.
-  """
-
+    enable_quantization: bool) -> tf.lite.TFLiteConverter:
   converter = tf.lite.TFLiteConverter.from_saved_model(saved_model_path)
-
-  converter.optimizations = quantization_optimizations
-  converter.target_spec.supported_types = quantization_supported_types
-
-  if input_data:
-
-    def _representative_dataset():
-      # TODO(b/175699054): Fill the logic once input_data is landed.
-      pass
-
-    converter.representative_dataset = _representative_dataset
-
-    # TODO(b/175699054): Remove once data API is adopted.
-    raise NotImplementedError('Full-integer quantization is not supported yet.')
-
+  if enable_quantization:
+    converter.optimizations = [tf.lite.Optimize.DEFAULT]
   return converter
 
 
@@ -97,15 +55,12 @@ def _create_tflite_compatible_saved_model(src: Text, dst: Text):
 class TFLiteRewriter(rewriter.BaseRewriter):
   """Performs TFLite conversion."""
 
-  def __init__(
-      self,
-      name: Text,
-      filename: Text = 'tflite',
-      copy_assets: bool = True,
-      copy_assets_extra: bool = True,
-      quantization_optimizations: Optional[Sequence[tf.lite.Optimize]] = None,
-      quantization_supported_types: Optional[Sequence[tf.DType]] = None,
-      quantization_enable_full_integer: bool = False):
+  def __init__(self,
+               name: Text,
+               filename: Text = 'tflite',
+               copy_assets: bool = True,
+               copy_assets_extra: bool = True,
+               enable_quantization: bool = False):
     """Create an instance of the TFLiteRewriter.
 
     Args:
@@ -115,36 +70,15 @@ class TFLiteRewriter(rewriter.BaseRewriter):
         model directory.
       copy_assets_extra: Boolean whether to copy the assets.extra directory to
         the rewritten model directory.
-      quantization_optimizations: Options for optimizations in quantization. If
-        None, no quantization will be applied(float32). Check
-        https://www.tensorflow.org/lite/performance/post_training_quantization
-        for details.
-      quantization_supported_types: Options for optimizations in quantization.
-        Check
-        https://www.tensorflow.org/lite/performance/post_training_quantization
-        for details.
-      quantization_enable_full_integer: True to quantizae with FULL_INTEGER
-        option.
+      enable_quantization: Boolean whether to enable default TFLite
+        quantization.
     """
     # TODO(b/152636072): Add support for representative_dataset.
     self._name = name
     self._filename = six.ensure_text(filename)
     self._copy_assets = copy_assets
     self._copy_assets_extra = copy_assets_extra
-
-    if quantization_optimizations is None:
-      quantization_optimizations = []
-    if quantization_supported_types is None:
-      quantization_supported_types = []
-    self._quantization_optimizations = quantization_optimizations
-    self._quantization_supported_types = quantization_supported_types
-    self._input_data = None
-    if quantization_enable_full_integer:
-      # TODO(b/175699054): Enable once data API is landed.
-      # This is to trigger FULL_INTEGER path inside _create_tflite_converter
-      # for testing purpose. As a consequence the code will throw
-      # NotImplementedError inside _create_tflite_converter.
-      self._input_data = 1
+    self._enable_quantization = enable_quantization
 
   @property
   def name(self) -> Text:
@@ -198,10 +132,7 @@ class TFLiteRewriter(rewriter.BaseRewriter):
 
     converter = _create_tflite_converter(
         saved_model_path=tmp_model_dir,
-        quantization_optimizations=self._quantization_optimizations,
-        quantization_supported_types=self._quantization_supported_types,
-        # TODO(b/175699054): Enable once data API is landed.
-        input_data=self._input_data)
+        enable_quantization=self._enable_quantization)
     tflite_model = converter.convert()
 
     output_path = os.path.join(
