@@ -14,6 +14,10 @@
 # limitations under the License.
 """Tests for tfx.extensions.google_cloud_big_query.example_gen.executor."""
 
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+
 import os
 import random
 
@@ -24,7 +28,6 @@ import mock
 import tensorflow as tf
 from tfx.dsl.components.base import base_executor
 from tfx.dsl.io import fileio
-from tfx.extensions.google_cloud_big_query import utils
 from tfx.extensions.google_cloud_big_query.example_gen import executor
 from tfx.proto import example_gen_pb2
 from tfx.types import artifact_utils
@@ -77,8 +80,8 @@ class ExecutorTest(tf.test.TestCase):
     super(ExecutorTest, self).setUp()
 
   @mock.patch.multiple(
-      utils,
-      ReadFromBigQuery=_MockReadFromBigQuery2,
+      executor,
+      _ReadFromBigQueryImpl=_MockReadFromBigQuery2,  # pylint: disable=invalid-name, unused-argument
   )
   @mock.patch.object(bigquery, 'Client')
   def testBigQueryToExample(self, mock_client):
@@ -111,8 +114,8 @@ class ExecutorTest(tf.test.TestCase):
       util.assert_that(examples, util.equal_to([example_proto]))
 
   @mock.patch.multiple(
-      utils,
-      ReadFromBigQuery=_MockReadFromBigQuery,
+      executor,
+      _ReadFromBigQueryImpl=_MockReadFromBigQuery,  # pylint: disable=invalid-name, unused-argument
   )
   @mock.patch.object(bigquery, 'Client')
   def testDo(self, mock_client):

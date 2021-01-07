@@ -2,25 +2,7 @@
 
 ## Major Features and Improvements
 
-* Supports different types of quantizations on TFLite conversion using
-  TFLITE_REWRITER by setting quantization_optimizations,
-  quantization_supported_types and quantization_enable_full_integer. Flag
-  definitions can be found here: [Post-traning
-  quantization](https://www.tensorflow.org/lite/performance/post_training_quantization).
-
 ## Breaking changes
-*   Do not store pipeline information on the local filesystem when using
-    Kubeflow Pipelines orchestration with CLI. CLI will always use the latest
-    version of the pipeline in the Kubeflow Pipeline cluster.
-    All operations will be executed based on the information on the
-    Kubeflow Pipeline cluster. There might be some left files on
-    `${HOME}/tfx/kubeflow` or `${HOME}/kubeflow` but those will not be used
-    any more.
-
-* enable_quantization from TFLITE_REWRITER is removed and setting
-  quantization_optimizations = [tf.lite.Optimize.DEFAULT] will perform the same
-  type of quantization, dynamic range quantization. Users of the TFLITE_REWRITER
-  who do not enable quantization should be uneffected.
 
 ### For pipeline authors
 
@@ -29,12 +11,6 @@
 ## Deprecations
 
 ## Bug fixes and other changes
-
-*   InfraValidator supports using alternative TensorFlow Serving image in case
-    deployed environment cannot reach the public internet (nor the docker hub).
-    Such alternative image should behave the same as official
-    `tensorflow/serving` image such as the same model volume path, serving port,
-    etc.
 
 ## Documentation updates
 
@@ -68,8 +44,7 @@
 
 ### For pipeline authors
 
-*   Added BigQueryToElwcExampleGen to take a query as input and generate
-    ExampleListWithContext (ELWC) examples.
+*   N/A
 
 ### For component authors
 
